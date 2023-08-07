@@ -1,8 +1,7 @@
-use std::borrow::BorrowMut;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use crate::pdf_parser::PDFEmailInfo;
 use std::{env, fs};
-use std::fs::{create_dir, metadata};
+use std::fs::metadata;
 
 mod pdf_parser;
 mod header_parser;
@@ -59,7 +58,7 @@ fn process_pdf(pdf_file: String, destination_dir: &String) {
 fn copy_pdf(pdf_file: String, new_name: String, destination_dir: &String) -> Result<(), String> {
     let new_dir = Path::new(destination_dir).join(new_name.clone());
     return match fs::create_dir(new_dir.clone()) {
-        Ok(a) => {
+        Ok(_) => {
             let dest_file = new_dir.clone().join(format!("{}{}", new_name, String::from(".pdf")));
             match fs::copy(pdf_file, dest_file) {
                 Err(e) => {
@@ -86,25 +85,18 @@ fn get_pdf_files(source_dir: &str) -> Vec<String> {
                 .collect::<Vec<String>>();
         }
         Err(e) => {
-            panic!("{}", format!("Could not read directory: {}", source_dir));
+            panic!("{}", format!("Could not read directory: {} with error: {}", source_dir, e.to_string()));
         }
     }
 }
 
 fn get_file_name(header: &PDFEmailInfo) -> Result<String, String> {
     let max_len = 35;
-    let email = header_parser::format_email(header.from_line.clone());
-    let date =  header_parser::format_date(header.date_line.clone());
+    let email = header_parser::format_email(header.from_line.clone())?;
+    let date =  header_parser::format_date(header.date_line.clone())?;
     let subject =  header_parser::format_subject(header.subject_line.clone());
 
-    if email.is_err() {
-        return Err(email.err().unwrap())
-    }
-    if date.is_err() {
-        return Err(date.err().unwrap())
-    }
-
-    let mut file_name =  format!("{}_{}_{}", date.unwrap(), email.unwrap(), subject);
+    let mut file_name =  format!("{}_{}_{}", date, email, subject);
     return if file_name.len() < max_len {
         Ok(file_name)
     } else {
